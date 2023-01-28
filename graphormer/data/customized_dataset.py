@@ -177,7 +177,7 @@ class GlycanDBCSV(DGLDataset):
                     fraction = int(row['Source File'].split('.')[0][-1])
                     fraction_id = tissue_id * num_fractions + fraction
                     glycan_psm[fraction_id].append(row)
-            fraction_id_list = range(1, 21)#[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21,22, 23, 24, 25]
+            fraction_id_list = range(1, 26)#[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21,22, 23, 24, 25]
             print(fraction_id_list)
             procs = []
             for fraction_id in fraction_id_list[:]:

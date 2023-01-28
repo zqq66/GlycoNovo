@@ -453,13 +453,13 @@ def inference_on_psm(args, all_entries, sugar_classes, csv_file):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
-    model_file = args.graph_model
+    model_file = '../../examples/property_prediction/ckpts/unseen_'+ tissue+'_graphormer.pt'
     print(model_file)
     graphormer_model.load_state_dict(torch.load(model_file),
                                      strict=False)
     graphormer_model.to(device)
 
-    ion_model = args.cnn_model
+    ion_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_'+tissue+'_no_intensity_isotope.pt'
     print(ion_model)
     model = GraphormerIonCNN(args, ion_mass, sugar_classes, graphormer_model)
     model.load_state_dict(torch.load(ion_model), strict=False)
