@@ -432,7 +432,7 @@ def main(args):
     multiple_prediction = 0
     with open(args.output_file, 'w', newline='') as csvfile:
         rand_psm = list(glycan_psm.keys())[0]
-        csvwriter.writerow(list(glycan_psm[rand_psm].keys())
+        csvwriter.writerow(list(glycan_psm[rand_psm].keys()))
         csvwriter = csv.writer(csvfile, delimiter=',')
 
         for fraction_id in fraction_id_list[:]:

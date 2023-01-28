@@ -1,4 +1,5 @@
 import torch
+import re
 from sklearn.model_selection import train_test_split
 import csv
 import time
@@ -75,6 +76,7 @@ def parse_args():
     parser.add_argument('--inference_cnn', action='store_true', help='Whether to evaluate.')
     parser.add_argument('--prediction', action='store_true', help='Whether to predict.')
     parser.add_argument('--csv_file', type=str, default='../../../Graphormer/data/mouse_tissues.csv')
+    parser.add_argument('--mgf_file', type=str, default='../../../Graphormer/data/mouse_tissues_spectrum.mgf')
     parser.add_argument('--graph_model', type=str, default='../../examples/property_prediction/ckpts/model_pos_node_stop.pt')
     parser.add_argument('--cnn_model', type=str, default='../../examples/property_prediction/ckpts/mouse_tissue_all_no_intensity_isotope.pt')
     parser.add_argument('--glycan_db', type=str, default='../../../Graphormer/data/glycan_database/glycans_yeast_mouse.pkl')
@@ -386,7 +388,7 @@ def inference(args, all_entries, model, dataset_dict, sugar_classes, csv_file, d
 # with ion CNN encoding spectrum
 def train_on_psm(args, all_entries, sugar_classes):
     csvfile = '../../../Graphormer/data/mouse_tissues.csv'
-    dataset_dict = create_psm_db_dataset(csvfile)
+    dataset_dict = create_psm_db_dataset(args, csvfile)
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, _ = setup_dataset_torch(args, dataset_dict)
     logger.info("\tDone loading dataset")
@@ -436,10 +438,12 @@ def train_on_psm(args, all_entries, sugar_classes):
 
 
 def inference_on_psm(args, all_entries, sugar_classes, csv_file):
-    tissue = args.csv_file.split('_')[-1][:-1]
+    match = re.search(r"_([a-z]+)[0-9]", args.csv_file)
+    if match:
+        tissue = match.group(1)
     print(tissue)
     print(csv_file)
-    dataset_dict = create_csv_dataset(csv_file)
+    dataset_dict = create_csv_dataset(args, csv_file)
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
@@ -449,7 +453,7 @@ def inference_on_psm(args, all_entries, sugar_classes, csv_file):
                                      strict=False)
     graphormer_model.to(device)
 
-    ion_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_'+tissue+'_no_intensity_isotope.pt'
+    ion_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_'+tissue+'.pt'
     print(ion_model)
     model = GraphormerIonCNN(args, ion_mass, sugar_classes, graphormer_model)
     model.load_state_dict(torch.load(ion_model), strict=False)
@@ -459,7 +463,7 @@ def inference_on_psm(args, all_entries, sugar_classes, csv_file):
 
 
 def prediction(args, all_entries, sugar_classes, csv_file):
-    dataset_dict = create_csv_dataset(csv_file)
+    dataset_dict = create_csv_dataset(args, csv_file)
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)

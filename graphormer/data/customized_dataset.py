@@ -20,7 +20,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 logger = logging.getLogger(__name__)
 
 from data import register_dataset
-from data.eval_util import tree_to_graph, read_spectrum, find_submass
+from data.eval_util import tree_to_graph, read_spectrum, find_submass, spectrum_preprocessing
 mass_free_reducing_end = 18.01056468370001
 mass_proton = 1.00727647
 
@@ -76,7 +76,7 @@ def cut2trees(target_glycan, sugar_classes):
 
 
 class GlycanDBCSV(DGLDataset):
-    def __init__(self, glycan_dict, csvfile):
+    def __init__(self, args, glycan_dict, csvfile):
         self.glycan_dict = glycan_dict
         self.graphs = []
         self.labels = []
@@ -89,8 +89,9 @@ class GlycanDBCSV(DGLDataset):
             self.all_entries = pickle.load(f)
         sugar_classes = ['Fuc', 'Hex', 'HexNAc', 'NeuAc', 'NeuGc', 'Xyl']
         stop_token = glypy.monosaccharides['Xyl']
+        self.input_spectrum_file, self.spectrum_location_dict = spectrum_preprocessing(args)
+        self.input_spectrum_handle = open(self.input_spectrum_file, 'r')
         self.sugar_classes = [glypy.monosaccharides[name].mass() - mass_free_reducing_end for name in sugar_classes]
-
         self.ion_mass = find_submass(self.all_entries, self.sugar_classes)
         super().__init__(name='glycan_csv')
 
@@ -108,7 +109,7 @@ class GlycanDBCSV(DGLDataset):
             glycan = self.glycan_dict[target_glycan_id]['GLYCAN'].clone()
             glycan = glypy_glycoct.loads(glycan.serialize()).reindex(method='bfs')
             tree_glycopsm_list, labels, left_comps, parents, parents_depth = cut2trees(glycan, self.sugar_classes)
-            mz, intensity = read_spectrum(scan, peptide_only_mass)
+            mz, intensity = read_spectrum(self.input_spectrum_handle, self.spectrum_location_dict, scan, peptide_only_mass)
             for idx, tree in enumerate(tree_glycopsm_list[:-1]):
                 tree = glypy_glycoct.loads(tree)
                 left_comp = torch.tensor(left_comps[idx])
@@ -314,7 +315,7 @@ class GlycanDB(DGLDataset):
     
     
 class GlycanCSV(DGLDataset):
-    def __init__(self, glycan_dict, csv_file):
+    def __init__(self, args, glycan_dict, csv_file):
         self.glycan_dict = glycan_dict
         self.graphs = []
         self.labels = []
@@ -329,7 +330,8 @@ class GlycanCSV(DGLDataset):
         stop_token = glypy.monosaccharides['Xyl']
         self.sugar_classes = [glypy.monosaccharides[name].mass() - mass_free_reducing_end for name in sugar_classes]
         self.ion_mass = find_submass(self.all_entries, self.sugar_classes)
-
+        self.input_spectrum_file, self.spectrum_location_dict = spectrum_preprocessing(args)
+        self.input_spectrum_handle = open(self.input_spectrum_file, 'r')
         super().__init__(name='glycan_csv')
 
     def process(self):
@@ -388,7 +390,8 @@ class GlycanCSV(DGLDataset):
                 self.labels.append(torch.tensor([[int(target_glycan_id), fraction_id, int(psm_scan), peptide_only_mass]]))
                 current_mass = peptide_only_mass
                 theoretical_mz = torch.add(current_mass, self.ion_mass)
-                mz, intensity = read_spectrum(scan, current_mass)
+                mz, intensity = read_spectrum(self.input_spectrum_handle, self.spectrum_location_dict, scan,
+                                              peptide_only_mass)
                 self.theoretical_mzs.append(torch.tensor(theoretical_mz))
                 self.observed_mzs.append(torch.tensor(mz))
                 self.intensities.append(torch.tensor(intensity))
@@ -413,17 +416,17 @@ def split_dataset(dataset):
 
 
 # @register_dataset("csv_psm")
-def create_csv_dataset(csvfile):
+def create_csv_dataset(args, csvfile):
     with open('../../../Graphormer/data/glycan_database/glycans_yeast_mouse.pkl', 'rb') as f:
         glycan_dict = pickle.load(f)
-    dataset = GlycanCSV(glycan_dict, csvfile)
+    dataset = GlycanCSV(args, glycan_dict, csvfile)
     return split_dataset(dataset)
 
-def create_psm_db_dataset(csvfile):
+def create_psm_db_dataset(args, csvfile):
     # glycan_dict = read_database()
     with open('../../../Graphormer/data/glycan_database/glycans_yeast_mouse.pkl', 'rb') as f:
         glycan_dict = pickle.load(f)
-    dataset = GlycanDBCSV(glycan_dict, csvfile)
+    dataset = GlycanDBCSV(args, glycan_dict, csvfile)
     return split_dataset(dataset)
 
 

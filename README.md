@@ -7,15 +7,27 @@ All Data and checkpoints can be found here https://drive.google.com/drive/folder
 As mentioned in the paper, candidates will be automatically generated during training process.
 If you want to inference the framework without training, please make sure to include "all_entries.pkl" in criterions directory
 
+After cloning the repository
+1. redirect to the entry of the whole program
+
+```
+cd graphormer/evaluate
+```
+
+2. Install dependency (make sure python>=3.9 installed)
+```
+bash install.sh
+```
+
 Train the model with respect to glycan structure
 ```
-python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train --batch_size=256 --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt
+python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train --batch_size=256 --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt
 ```
 
 
 Train the model with respect to spectrum
 ```
-python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train_cnn --batch_size=256 --csv_file=../../../Graphormer/data/mouse_tissues.csv --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
+python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train_cnn --batch_size=256 --csv_file=../../../Graphormer/data/mouse_tissues.csv --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf
 ```
 
 
@@ -24,15 +36,16 @@ Evaluate the framework
 Please note that if you don't want to generate composition through composition denovo, you have to include your csv with a column named "Glycan" that includes composition information before building structure through neural network
 composition denovo can be done by
 ```
-python composition_denovo.py --mgf_file=MouseKidney-Z-T-1.refined.mgf --csv_file=glycanfinder.glycopsms.MouseKidney-Z-T-1.csv --output_file=mouse_kidney_pred_comp1.csv
+cd ..
+python composition_denovo.py --mgf_file=MouseKidney-Z-T-1.refined.mgf --csv_file=../Graphormer/data/glycanfinder.glycopsms.MouseKidney-Z-T-1.csv --output_file=mouse_kidney_pred_comp1.csv
 
 ```
 build structure
 ```
-python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --inference_cnn --batch_size=256 --csv_file=comp_denovo_strucgp_mouse_kidney1
+python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --inference_cnn --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_lung1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf
 ```
 prediction
 ```
-python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=comp_denovo_strucgp_mouse_kidney1 --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
+python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_kidney1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
 ```
 More details and explanations are provided in the notebook. This is an on-going work, more data and materials will be further added. Please feel free to contact us if you have any questions.

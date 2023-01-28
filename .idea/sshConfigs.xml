@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="localhost" id="cba699b3-c450-438f-a656-d99b678d40f4" port="22" customName="qianqiuzhang@ming-gpu-v100.cs.uwaterloo.ca" nameFormat="CUSTOM" username="qianqiuzhang" useOpenSSHConfig="true">
+        <option name="customName" value="qianqiuzhang@ming-gpu-v100.cs.uwaterloo.ca" />
+      </sshConfig>
+    </configs>
+  </component>
+</project>

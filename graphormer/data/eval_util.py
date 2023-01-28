@@ -73,9 +73,11 @@ def graph2glycan(graph, sugar_classes):
     except:
         return
 
-
-def read_spectrum(scan_id):
-    input_spectrum_file = "../../../Graphormer/data/mouse_tissues_spectrum.mgf"
+def spectrum_preprocessing(args):
+    input_spectrum_file = args.mgf_file
+    tissue_name = ['MouseBrain', 'MouseHeart', 'MouseKidney', 'MouseLiver', 'MouseLung']
+    num_fractions = 5
+    print("Prepare input_spectrum_file =", input_spectrum_file)
     spectrum_location_file = input_spectrum_file + '.locations.pkl'
     if os.path.exists(spectrum_location_file):
         with open(spectrum_location_file, 'rb') as fr:
@@ -88,8 +90,6 @@ def read_spectrum(scan_id):
         spectrum_location_dict = {}
         spectrum_rtinseconds_dict = {}
         line = True
-        tissue_name = ['MouseBrain', 'MouseHeart', 'MouseKidney', 'MouseLiver', 'MouseLung']
-        num_fractions = 5
         while line:
             current_location = input_spectrum_handle.tell()
             line = input_spectrum_handle.readline()
@@ -116,10 +116,10 @@ def read_spectrum(scan_id):
         input_spectrum_handle.close()
     print("len(spectrum_location_dict) =", len(spectrum_location_dict))
     print()
-    with open(spectrum_location_file, 'rb') as fr:
-        data = pickle.load(fr)
-        spectrum_location_dict, spectrum_rtinseconds_dict, spectrum_count = data
-    input_spectrum_handle = open(input_spectrum_file, 'r')
+    return input_spectrum_file, spectrum_location_dict
+
+
+def read_spectrum(input_spectrum_handle, spectrum_location_dict, scan_id, peptide_mass):
     spectrum_location = spectrum_location_dict[scan_id]
     input_file_handle = input_spectrum_handle
     input_file_handle.seek(spectrum_location)
