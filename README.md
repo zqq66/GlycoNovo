@@ -27,6 +27,6 @@ python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_befo
 ```
 prediction
 ```
-python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=comp_denovo_strucgp_mouse_kidney1
+python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=comp_denovo_strucgp_mouse_kidney1 --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
 ```
 More details and explanations are provided in the notebook. This is an on-going work, more data and materials will be further added. Please feel free to contact us if you have any questions.
