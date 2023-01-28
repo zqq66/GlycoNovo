@@ -82,10 +82,6 @@ def parse_args():
 
     return parser.parse_args()
 
-#
-# class GraphormerPsmScore(nn.Module):
-#
-
 
 class GraphormerIonCNN(nn.Module):
     def __init__(self, args, ion_mass, sugar_classes, graph_embedding=None):
@@ -101,14 +97,8 @@ class GraphormerIonCNN(nn.Module):
     def forward(self, batched_data):
         out = self.ionCNN(batched_data)
         with torch.no_grad():
-            graph_embed, graph_pred = self.graph_embedding(batched_data)#[:, 0, :]
-            # graph_embed_out = functional.softmax(graph_embed, dim=1)
-
-            # x = functional.softmax(out, dim=1)
-            # out = self.weight_inp1 * out + self.weight_inp2 * x
-            # combined = torch.stack((graph_embed_out, x), dim=1)
-            # out = torch.mean(combined, dim=1)
-        combined = torch.cat((graph_embed, out), dim=1)
+            graph_embed, graph_pred = self.graph_embedding(batched_data)
+            combined = torch.cat((graph_embed, out), dim=1)
         out = self.embed_out(combined)
         if not self.training:
             non_zero_idx = (torch.argmax(graph_pred, dim=-1) == 0).nonzero()

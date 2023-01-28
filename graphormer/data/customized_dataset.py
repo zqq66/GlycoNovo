@@ -240,8 +240,9 @@ class GlycanDB(DGLDataset):
         self.glycan_dict = glycan_dict
         self.graphs = []
         self.labels = []
-        with open('../criterions/all_entries.pkl', 'rb') as f:
-            self.all_entries = pickle.load(f)
+        self.all_entries = []
+        # with open('../criterions/all_entries.pkl', 'rb') as f:
+        #     self.all_entries = pickle.load(f)
         self.left_compositions = []
         self.parents = []
         self.parents_depth = []
@@ -259,25 +260,6 @@ class GlycanDB(DGLDataset):
                             glycan.iternodes(method='bfs')]
             compositions = [sugar_classes.index(mass) for mass in compositions]
             composition_counter = collections.Counter(compositions)
-            # """
-            # remove glycans have Fuc but not on root
-            cur_label = torch.zeros((1, len(sugar_classes)), dtype=torch.int32)
-            leaf = list(glycan.iternodes(method='bfs'))[0]
-            children = leaf.children()
-            mass = torch.tensor(
-                [sugar_classes.index(MonosaccharideResidue.from_monosaccharide(l[-1]).mass()) for l in children])
-            cur_label[:, mass] = 1
-            cur_label = cur_label.tolist()
-
-            for leaf in leaves:
-                leaf.add_monosaccharide(stop_token.clone())
-           
-            if cur_label == [[0, 0, 1, 0, 0, 0]]:
-                # print(glycan_id, composition_counter)
-                if composition_counter[0] != 0:
-                    continue
-            # """
-
             glycan = glypy_glycoct.loads(glycan.serialize()).reindex(method='bfs')
             tree_glycopsm_list, labels, left_comps, parents, parents_depth = cut2trees(glycan, sugar_classes)
             for idx, tree in enumerate(tree_glycopsm_list[:-1]):
@@ -294,29 +276,21 @@ class GlycanDB(DGLDataset):
                 onehot_label = self.all_entries.index(unordered_label)
                 self.labels.append(onehot_label)
                 self.parents_depth.append(torch.tensor(parents[idx]))
-            edges_src, edges_dst = np.array([]).astype('int'), np.array([]).astype('int')
             edges_src, edges_dst = np.array([0]).astype('int'), np.array([1]).astype('int')
             root_G = dgl.graph((edges_src, edges_dst), num_nodes=2)
-            # root_G.add_nodes(1)
-            #TODO
             initial_comp = torch.zeros((1, len(sugar_classes)))
             for k in composition_counter.keys():
                 initial_comp[:, k] = composition_counter[k]
             initial_comp[:, len(sugar_classes) - 1] = 10
             initial_comp = torch.cat((initial_comp, initial_comp))
             root_G.ndata['x'] = torch.tensor(initial_comp, dtype=torch.int32)  #torch.tensor([len(sugar_classes)], dtype=torch.long)
-            # root_G.add_edge(0, 0)
             self.graphs.append(root_G)
             self.labels.append(self.all_entries.index(labels[-1].tolist()))
             self.parents.append(torch.tensor(len(sugar_classes)))
             self.parents_depth.append(torch.tensor(0))
-
-            ori_comp = [MonosaccharideResidue.from_monosaccharide(node).mass() for node in glycan.iternodes(method='bfs')]
-            # print('ori_comp', left_comps[-1])
-
             self.left_compositions.append(torch.tensor(left_comps[-1]))
-        # with open('D:/Qianqiu/Graphormer/graphormer/criterions/all_entries.pkl', 'wb') as f:
-        #     pickle.dump(self.all_entries, f)
+        with open('../criterions/all_entries.pkl', 'wb') as f:
+            pickle.dump(self.all_entries, f)
         print('ori_comp', self.left_compositions[-1])
         print('len(self.all_entries)', len(self.all_entries))
         print('len(self.graphs)', len(self.graphs))

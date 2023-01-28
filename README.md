@@ -4,7 +4,10 @@ This is a database-independent method for determining the structure of glycans, 
 
 All Data and checkpoints can be found here https://drive.google.com/drive/folders/1XbAtWeh4HoHD1l3bMeyMOxM_vB15IFIi?usp=sharing
 
-Train the model with respect to glcan structure
+As mentioned in the paper, candidates will be automatically generated during training process.
+If you want to inference the framework without training, please make sure to include "all_entries.pkl" in criterions directory
+
+Train the model with respect to glycan structure
 ```
 python evaluate/train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train --batch_size=256 --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt
 ```
