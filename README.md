@@ -7,9 +7,9 @@ The training, testing data and pretrained model are publicly available here:
 https://drive.google.com/drive/folders/1o84GYwIlAg06rJJTcgR1LXSRf6KNnvF1?usp=sharing
 
 The training, prediction, and evaluation can be done by 
-'''
+```
 python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --inference_cnn --batch_size=256 --csv_file=pred_comp_mouse_heart1 > test_heart_all.log
-'''
+```
 
 To perform evaluation, please use the dataset `Demo_IgG_Orbitrap` and the pretrained model, and run the following sections in the notebook:
 - `I/O FUNCTIONS and DATA PRE-PROCESSING`
