@@ -288,12 +288,6 @@ def test_glycan_accuracy(target_glycans, predict_glycans, csvfile, top=None):
             psm = glycan_psm[scan_id]
             target_b_set, target_y_set = get_b_y_set(target_glycan, resolution)
             num_target_y += len(target_y_set)
-            best_predict_y = set()
-            best_predict_b = set()
-            best_correct_y = set()
-            best_correct_glycan = 0.
-            best_candidate = None
-
             candidate = candidates
             predict_b_set, predict_y_set = get_b_y_set(candidate, resolution) if candidate else (set(), set())
             correct_y_set = target_y_set.intersection(predict_y_set)
@@ -345,7 +339,6 @@ def test_glycan_accuracy(target_glycans, predict_glycans, csvfile, top=None):
     print("precision_y = {:.2f}".format(precision_y))
     print('unique_correct_glycan', len(set(correct_glycans)))
     print('correct_scans', correct_scans)
-    print('matched on spectrum', spectrum_correct_glycans)
     return num_correct_glycans
 
 
