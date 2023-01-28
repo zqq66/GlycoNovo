@@ -24,7 +24,7 @@ from modules import GraphormerGraphEncoder
 from modules import ionCNN
 
 from data.dgl_datasets.dgl_dataset import GraphormerDGLDataset, preprocess_dgl_graph
-from data.customized_dataset import create_csv_dataset, create_psm_db_dataset
+from data.customized_dataset import create_csv_dataset, create_psm_db_dataset, create_customized_dataset
 from data.collator import collator
 from data.eval_util import graph2glycan, test_glycan_accuracy, find_submass, read_csv_files
 
@@ -70,10 +70,14 @@ def parse_args():
         "--metric",
         type=str,
     )
-    parser.add_argument("--train_cnn", action='store_true', help="Whether to run training.")
-    parser.add_argument('--inference_cnn', action='store_true', help='Whether to test.')
-    parser.add_argument('--prediction', action='store_true', help='Whether to test.')
-    parser.add_argument('--csv_file', type=str)
+    parser.add_argument("--train_cnn", action='store_true', help="Whether to run training on spectrum.")
+    parser.add_argument("--train", action='store_true', help="Whether to run training on glycan structure.")
+    parser.add_argument('--inference_cnn', action='store_true', help='Whether to evaluate.')
+    parser.add_argument('--prediction', action='store_true', help='Whether to predict.')
+    parser.add_argument('--csv_file', type=str, default='../../../Graphormer/data/mouse_tissues.csv')
+    parser.add_argument('--graph_model', type=str, default='../../examples/property_prediction/ckpts/model_pos_node_stop.pt')
+    parser.add_argument('--cnn_model', type=str, default='../../examples/property_prediction/ckpts/mouse_tissue_all_no_intensity_isotope.pt')
+    parser.add_argument('--glycan_db', type=str, default='../../../Graphormer/data/glycan_database/glycans_yeast_mouse.pkl')
     parser.add_argument('--max_time_step', type=int, default=50)
 
     return parser.parse_args()
@@ -204,13 +208,16 @@ def single_generative_step(parent_node, nodes_onehot, graph):
 
     return graph
 
-def train(model, optimizer, sample, targets, all_entries):
+def train(model, optimizer, sample, targets, all_entries, graph=True):
     model.train()
     optimizer.zero_grad()
     sample_size = len(sample['idx'])
     left_comps = sample['left_comps']
     sample_dict = {'batched_data': sample}
-    logits = model(**sample_dict)
+    if graph:
+        logits = model(**sample_dict)[-1]
+    else:
+        logits = model(**sample_dict)
     targets = targets.to(torch.long)
 
     torch.cuda.empty_cache()
@@ -366,7 +373,7 @@ def inference(args, all_entries, model, dataset_dict, sugar_classes, csv_file, d
                     psm = glycan_psm[scan_id]
                     csvwriter.writerow(list(psm.values()) + [glypy_glycoct.dumps(glycan).replace('\n', ' ')])
     else:
-        with open('../../../Graphormer/data/glycan_database/glycans_yeast_mouse.pkl', 'rb') as f:
+        with open(args.glycan_db, 'rb') as f:
             glycan_dict = pickle.load(f)
         target_glycan = [[glycan_dict[str(int(item[0]))]['GLYCAN'], int(item[1]), int(item[2]), item[3].item()] for item
                          in target_graph]
@@ -393,9 +400,9 @@ def train_on_psm(args, all_entries, sugar_classes):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, _ = setup_dataset_torch(args, dataset_dict)
     logger.info("\tDone loading dataset")
-    model_name = '../../examples/property_prediction/ckpts/unseen_lung_graphormer.pt'
+    model_name = args.graph_model
     print(model_name)
-    cnn_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_lung_no_intensity_isotope.pt'
+    cnn_model = args.cnn_model
     print(cnn_model)
     graphormer_model = GraphormerModel(args)
     graphormer_model.load_state_dict(torch.load(model_name), strict=False)
@@ -416,7 +423,7 @@ def train_on_psm(args, all_entries, sugar_classes):
         for i, sample in enumerate(train_dataloader):
             # target = sample["y"]
             target = sample["y"]
-            loss, ncorrect, sample_size = train(model, optimizer, sample, target, all_entries)
+            loss, ncorrect, sample_size = train(model, optimizer, sample, target, all_entries, False)
             train_ncorrects += ncorrect
             train_sample_sizes += sample_size
             train_epoch_loss += loss
@@ -446,13 +453,13 @@ def inference_on_psm(args, all_entries, sugar_classes, csv_file):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
-    model_file = '../../examples/property_prediction/ckpts/unseen_'+ tissue+'_graphormer.pt'
+    model_file = args.graph_model
     print(model_file)
     graphormer_model.load_state_dict(torch.load(model_file),
                                      strict=False)
     graphormer_model.to(device)
 
-    ion_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_'+tissue+'_no_intensity_isotope.pt'
+    ion_model = args.cnn_model
     print(ion_model)
     model = GraphormerIonCNN(args, ion_mass, sugar_classes, graphormer_model)
     model.load_state_dict(torch.load(ion_model), strict=False)
@@ -466,13 +473,13 @@ def prediction(args, all_entries, sugar_classes, csv_file):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
-    model_file = '../../examples/property_prediction/ckpts/model_pos_node_stop.pt'
+    model_file =args.graph_model
     print(model_file)
     graphormer_model.load_state_dict(torch.load(model_file),
                                      strict=False)
     graphormer_model.to(device)
     model = GraphormerIonCNN(args, ion_mass, sugar_classes, graphormer_model)
-    model.load_state_dict(torch.load('../../examples/property_prediction/ckpts/mouse_tissue_all.pt'),
+    model.load_state_dict(torch.load(args.cnn_model),
                           strict=False)
     model.to(device)
 
@@ -511,7 +518,7 @@ def train_graph(args, all_entries):
         train_ncorrects = train_ncorrects / train_sample_sizes
         if train_ncorrects > best_ncorrect_val:
             print('-Model saved for epoch', epoch)
-            torch.save(model.state_dict(), '../../examples/property_prediction/ckpts/unseen_lung_graphormer_new.pt')
+            torch.save(model.state_dict(), args.graph_model)
         logger.info("\tEpoch: {0}".format(epoch))
         logger.info("\tTrain Loss: {0}| \tTrain Accuracy: {1}".format(train_epoch_loss, train_ncorrects))
         # print(f'\tTrain Loss: {train_epoch_loss:.3f} | \tVal Loss: {val_epoch_loss:.3f}' )
@@ -534,8 +541,9 @@ if __name__ == '__main__':
     stop_token = glypy.monosaccharides['Xyl']
     args = parse_args()
     sugar_classes = [glypy.monosaccharides[name].mass() - mass_free_reducing_end for name in sugar_classes_name]
-    csv_file = '../../../Graphormer/data/' + args.csv_file +'.csv'#'../../../Graphormer/data/comp_denovo_strucgp_mouse_lung1.csv'
-
+    csv_file = args.csv_file
+    if args.train:
+        train_graph(args, all_entries)
     if args.train_cnn:
         train_on_psm(args, all_entries, sugar_classes)
     if args.inference_cnn:

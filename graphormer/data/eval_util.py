@@ -77,6 +77,8 @@ def graph2glycan(graph, sugar_classes):
         return
 
 
+
+
 def read_spectrum(scan_id, peptide_only_mass):
     input_spectrum_file = "../../../Graphormer/data/mouse_tissues_spectrum.mgf"
     spectrum_location_file = input_spectrum_file + '.locations.pkl'
