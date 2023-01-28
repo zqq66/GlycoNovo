@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import os
 import pickle
 import itertools
 import torch
@@ -51,14 +52,10 @@ def graph2glycan(graph, sugar_classes):
             node_dict[node] = [int(v[idx])]
         else:
             node_dict[node].append(int(v[idx]))
-    # print(node_dict)
-    # root = glypy.monosaccharides[edge_pairs[0]]
-    # root.add_monosaccharide(glypy.monosaccharides[edge_pairs[1]])
-    root = sugar_classes[mono_list[0]]
+        root = sugar_classes[mono_list[0]]
     glycan = glypy.Glycan(root=glypy.monosaccharides[root])
     try:
         for node in range(0, num_nodes-2):
-            # print([MonosaccharideResidue.from_monosaccharide(node).residue_name() for node in glycan.iternodes(method='bfs')])
             if node in node_dict.keys():
                 for child in node_dict[node]:
                     child_mono = sugar_classes[mono_list[child]]
@@ -76,7 +73,8 @@ def graph2glycan(graph, sugar_classes):
     except:
         return
 
-def read_spectrum(scan_id, peptide_only_mass):
+
+def read_spectrum(scan_id):
     input_spectrum_file = "../../../Graphormer/data/mouse_tissues_spectrum.mgf"
     spectrum_location_file = input_spectrum_file + '.locations.pkl'
     if os.path.exists(spectrum_location_file):
@@ -90,6 +88,8 @@ def read_spectrum(scan_id, peptide_only_mass):
         spectrum_location_dict = {}
         spectrum_rtinseconds_dict = {}
         line = True
+        tissue_name = ['MouseBrain', 'MouseHeart', 'MouseKidney', 'MouseLiver', 'MouseLung']
+        num_fractions = 5
         while line:
             current_location = input_spectrum_handle.tell()
             line = input_spectrum_handle.readline()
