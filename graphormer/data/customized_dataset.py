@@ -240,7 +240,7 @@ class GlycanDB(DGLDataset):
         self.glycan_dict = glycan_dict
         self.graphs = []
         self.labels = []
-        with open('D:/Qianqiu/Graphormer/graphormer/criterions/all_entries.pkl', 'rb') as f:
+        with open('../criterions/all_entries.pkl', 'rb') as f:
             self.all_entries = pickle.load(f)
         self.left_compositions = []
         self.parents = []
