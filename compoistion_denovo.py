@@ -20,11 +20,9 @@ PROTON_MASS = 1.00727567
 def parse_args():
     parser = argparse.ArgumentParser()
     # data directory
-    parser.add_argument('--glycan_db', type=str, default='')
     parser.add_argument('--mgf_file', type=str, default='C:/shared/mouse_all_tissues/mgf/MouseKidney-Z-T-1.refined.mgf')
     parser.add_argument('--csv_file', type=str, default='C:/shared/mouse_all_tissues/psm/glycanfinder.glycopsms.MouseKidney-Z-T-1.csv')
     parser.add_argument('--output_file', type=str, default='C:/shared/mouse_all_tissues/comp_denovo/all/mouse_kidney_pred_comp1.csv')
-    parser.add_argument('--mgf_folder', type=str, default='data/mouse_brain/latest_model/')
     return parser.parse_args()
 
 
