@@ -76,12 +76,46 @@ def graph2glycan(graph, sugar_classes):
     except:
         return
 
-
-
-
 def read_spectrum(scan_id, peptide_only_mass):
     input_spectrum_file = "../../../Graphormer/data/mouse_tissues_spectrum.mgf"
     spectrum_location_file = input_spectrum_file + '.locations.pkl'
+    if os.path.exists(spectrum_location_file):
+        with open(spectrum_location_file, 'rb') as fr:
+            print("WorkerIO: read cached spectrum locations")
+            data = pickle.load(fr)
+            spectrum_location_dict, spectrum_rtinseconds_dict, spectrum_count = data
+    else:
+        print("WorkerIO: build spectrum location from scratch")
+        input_spectrum_handle = open(input_spectrum_file, 'r')
+        spectrum_location_dict = {}
+        spectrum_rtinseconds_dict = {}
+        line = True
+        while line:
+            current_location = input_spectrum_handle.tell()
+            line = input_spectrum_handle.readline()
+            if "BEGIN IONS" in line:
+                spectrum_location = current_location
+            elif "RAWFILE=" in line:
+                rawfile = re.split('=|\r|\n|\\\\', line)[-2]
+                print(rawfile)
+                tissue = rawfile.split('-')[0]
+                tissue_id = tissue_name.index(tissue)
+                fraction = int(rawfile.split('.')[0][-1])
+                fraction_id = tissue_id*num_fractions+fraction
+                print(fraction_id)
+            elif "SCANS=" in line:
+                scan = re.split('=|\r|\n', line)[1]
+                scan = 'F' + str(fraction_id) + ':' + scan
+                spectrum_location_dict[scan] = spectrum_location
+            elif "RTINSECONDS=" in line:
+                rtinseconds = float(re.split('=|\r|\n', line)[1])
+                spectrum_rtinseconds_dict[scan] = rtinseconds
+        spectrum_count = len(spectrum_location_dict)
+        with open(spectrum_location_file, 'wb') as fw:
+            pickle.dump((spectrum_location_dict, spectrum_rtinseconds_dict, spectrum_count), fw)
+        input_spectrum_handle.close()
+    print("len(spectrum_location_dict) =", len(spectrum_location_dict))
+    print()
     with open(spectrum_location_file, 'rb') as fr:
         data = pickle.load(fr)
         spectrum_location_dict, spectrum_rtinseconds_dict, spectrum_count = data
@@ -117,10 +151,6 @@ def read_spectrum(scan_id, peptide_only_mass):
         mz, intensity = re.split(' |\n', line)[:2]
         mz_float = float(mz)
         intensity_float = float(intensity)
-        # skip an ion if its mass > MZ_MAX
-        if mz_float < peptide_only_mass:
-            line = input_file_handle.readline()
-            continue
         mz_list.append(mz_float)
         intensity_list.append(intensity_float)
         line = input_file_handle.readline()
