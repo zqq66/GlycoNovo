@@ -21,9 +21,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # data directory
     parser.add_argument('--glycan_db', type=str, default='')
-    parser.add_argument('--model_folder', type=str, default='data/data.testing/glycan_IgG1/')
-    parser.add_argument('--output_folder', type=str, default='data/data.testing/glycan_IgG1/')
-    parser.add_argument('--csv_folder', type=str, default='data/mouse_brain/latest_model/')
+    parser.add_argument('--mgf_file', type=str, default='C:/shared/mouse_all_tissues/mgf/MouseKidney-Z-T-1.refined.mgf')
+    parser.add_argument('--csv_file', type=str, default='C:/shared/mouse_all_tissues/psm/glycanfinder.glycopsms.MouseKidney-Z-T-1.csv')
+    parser.add_argument('--output_file', type=str, default='C:/shared/mouse_all_tissues/comp_denovo/all/mouse_kidney_pred_comp1.csv')
     parser.add_argument('--mgf_folder', type=str, default='data/mouse_brain/latest_model/')
     return parser.parse_args()
 
@@ -111,23 +111,11 @@ def get_spectrum(input_spectrum_handle, spectrum_location_dict, scan, pep_mass):
 
 
 def spectrum_preprocessing(args, fraction_id_list):
-    # read mgf files
-    # mgf_files = [args.mgf_folder + 'IgG-MCC-150ng-' + str(x) + '.refined.mgf' for x in fraction_id_list]
-    # input_spectrum_file = args.mgf_folder + "IgG-MCC-150-spectrum.mgf"
-    input_spectrum_file = 'C:/shared/mouse_all_tissues/mgf/MouseKidney-Z-T-1.refined.mgf'
+
+    input_spectrum_file = args.mgf_file
     tissue_name = ['MouseBrain', 'MouseHeart', 'MouseKidney', 'MouseLiver', 'MouseLung']
     num_fractions = 5
     print("Prepare input_spectrum_file =", input_spectrum_file)
-    # if os.path.exists(input_spectrum_file):
-    #     print("input_spectrum_file exists!")
-    #     print()
-    # else:
-    #     merge_mgf_file(mgf_files, fraction_id_list, input_spectrum_file)
-    # print()
-
-    # store spectrum_location_dict to quickly retrieve spectrum from its scan id (copied from
-    # deepnovo_worker_io:get_location)
-    # get spectrum based on the scan id
     spectrum_location_file = input_spectrum_file + '.locations.pkl'
     if os.path.exists(spectrum_location_file):
         with open(spectrum_location_file, 'rb') as fr:
@@ -172,7 +160,7 @@ def spectrum_preprocessing(args, fraction_id_list):
 # prediction should read unlabeled data
 def read_csv_files(args, fraction_id_list):
     # read csv files
-    csvfile = 'C:/shared/mouse_all_tissues/psm/glycanfinder.glycopsms.MouseKidney-Z-T-1.csv'
+    csvfile = args.csv_file
     print("Prepare csv_files =", csvfile)
     glycan_psm = {x: [] for x in fraction_id_list}
     with open(csvfile, 'r') as csvfile:
@@ -444,7 +432,7 @@ def main(args):
     no_composition_scan = []
 
     multiple_prediction = 0
-    with open('C:/shared/mouse_all_tissues/comp_denovo/all/mouse_kidney_pred_comp1.csv', 'w', newline='') as csvfile:
+    with open(args.output_file, 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=',')
 
         for fraction_id in fraction_id_list[:]:
