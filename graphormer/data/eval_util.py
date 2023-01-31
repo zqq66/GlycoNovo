@@ -323,11 +323,10 @@ def test_glycan_accuracy(target_glycans, predict_glycans, csvfile, top=None):
                 error_type = 'incorrect_peak'
 
     sensitivity_y = num_correct_y / num_target_y
-    sensitivity_glycan = num_correct_glycans / num_targets
+    sensitivity_glycan = len(correct_glycans) / num_targets
     precision_y = num_correct_y / num_predict_y
     print('composition_incorrect', composition_incorrect)
     print('num_correct_compositions', composition_matched)
-    print('num_correct_glycans_topologic', num_correct_glycans)
     print("num_targets = ", num_targets)
     print("num_predicts = ", num_predicts)
     print("num_correct_glycans = ", len(correct_glycans))
