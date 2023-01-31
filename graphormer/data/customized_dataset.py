@@ -28,21 +28,16 @@ def cut2trees(target_glycan, sugar_classes):
     tree_glycopsm_list = []
     labels = []
     left_compositions = []
-    parents = []
     cur_node = target_glycan.index[-1]
     ori_comp = [MonosaccharideResidue.from_monosaccharide(node).mass() for node in target_glycan.iternodes(method='bfs')]
     ori_comp_lst = [sugar_classes.index(mass) for mass in ori_comp]
     ori_comp = collections.Counter(ori_comp_lst)
     ori_comp[len(sugar_classes)-1] = 10
-    parents_depth = []
     while cur_node.parents():
         parent = cur_node.parents()[0][-1]
         children = parent.children()
         parent_mass = MonosaccharideResidue.from_monosaccharide(parent).mass()
-        parents.append(sugar_classes.index(parent_mass))
         cur_label = torch.zeros((1, len(sugar_classes)), dtype=torch.int32)
-        depth = find_depth(parent, target_glycan)
-        parents_depth.append(depth)
         for child in children:
             child_pos = child[0]
             parent.drop_monosaccharide(child_pos)
@@ -66,13 +61,11 @@ def cut2trees(target_glycan, sugar_classes):
     last_sugar = sugar_classes.index(MonosaccharideResidue.from_monosaccharide(cur_node).mass())
     last_label[:, last_sugar] = 1
     labels.append(last_label)
-    parents_depth.append(0)
     ori_comp_tensor = torch.zeros((1, len(sugar_classes)))
     for k in ori_comp.keys():
         ori_comp_tensor[:, k] = ori_comp[k]
     left_compositions.append(ori_comp_tensor)
-    parents.append('<sos>')
-    return tree_glycopsm_list, labels, left_compositions, parents, parents_depth
+    return tree_glycopsm_list, labels, left_compositions
 
 
 class GlycanDBCSV(DGLDataset):
@@ -88,9 +81,7 @@ class GlycanDBCSV(DGLDataset):
         with open('../criterions/all_entries.pkl', 'rb') as f:
             self.all_entries = pickle.load(f)
         sugar_classes = ['Fuc', 'Hex', 'HexNAc', 'NeuAc', 'NeuGc', 'Xyl']
-        stop_token = glypy.monosaccharides['Xyl']
         self.input_spectrum_file, self.spectrum_location_dict = spectrum_preprocessing(args)
-        self.input_spectrum_handle = open(self.input_spectrum_file, 'r')
         self.sugar_classes = [glypy.monosaccharides[name].mass() - mass_free_reducing_end for name in sugar_classes]
         self.ion_mass = find_submass(self.all_entries, self.sugar_classes)
         super().__init__(name='glycan_csv')
@@ -108,8 +99,8 @@ class GlycanDBCSV(DGLDataset):
             composition = psm['Glycan']
             glycan = self.glycan_dict[target_glycan_id]['GLYCAN'].clone()
             glycan = glypy_glycoct.loads(glycan.serialize()).reindex(method='bfs')
-            tree_glycopsm_list, labels, left_comps, parents, parents_depth = cut2trees(glycan, self.sugar_classes)
-            mz, intensity = read_spectrum(self.input_spectrum_handle, self.spectrum_location_dict, scan, peptide_only_mass)
+            tree_glycopsm_list, labels, left_comps = cut2trees(glycan, self.sugar_classes)
+            mz, intensity = read_spectrum(self.input_spectrum_file, self.spectrum_location_dict, scan, peptide_only_mass)
             for idx, tree in enumerate(tree_glycopsm_list[:-1]):
                 tree = glypy_glycoct.loads(tree)
                 left_comp = torch.tensor(left_comps[idx])
@@ -117,7 +108,8 @@ class GlycanDBCSV(DGLDataset):
                 theoretical_mz = torch.add(current_mass, self.ion_mass)
                 graph, adjacency_matrix = tree_to_graph(tree, self.sugar_classes, len(self.sugar_classes), left_comp)
                 unordered_label = labels[idx].tolist()
-
+                if unordered_label not in self.all_entries:
+                    continue
                 self.graphs.append(graph)
                 self.left_compositions.append(left_comp)
                 self.labels.append(self.all_entries.index(unordered_label))
@@ -164,9 +156,12 @@ class GlycanDBCSV(DGLDataset):
         self.graphs = []
         self.labels = []
         dir = self.csvfile.split('/')[-1].split('.')[0]
+        if not os.path.exists(dir):
+            os.mkdir(dir)
         if not os.path.exists(dir+'/left_composition.pkl'):
             num_fractions = 5
             tissue_name = ['MouseBrain', 'MouseHeart', 'MouseKidney', 'MouseLiver', 'MouseLung']
+
             fraction_id_list = list(range(1, 1 + num_fractions * (len(tissue_name)+1)))
             glycan_psm = {x: [] for x in fraction_id_list}
             with open(self.csvfile, 'r') as csvfile:
@@ -178,7 +173,7 @@ class GlycanDBCSV(DGLDataset):
                     fraction = int(row['Source File'].split('.')[0][-1])
                     fraction_id = tissue_id * num_fractions + fraction
                     glycan_psm[fraction_id].append(row)
-            fraction_id_list = range(1, 26)#[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21,22, 23, 24, 25]
+            fraction_id_list = range(1,26)#[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21,22, 23, 24, 25]
             print(fraction_id_list)
             procs = []
             for fraction_id in fraction_id_list[:]:
@@ -262,7 +257,7 @@ class GlycanDB(DGLDataset):
             compositions = [sugar_classes.index(mass) for mass in compositions]
             composition_counter = collections.Counter(compositions)
             glycan = glypy_glycoct.loads(glycan.serialize()).reindex(method='bfs')
-            tree_glycopsm_list, labels, left_comps, parents, parents_depth = cut2trees(glycan, sugar_classes)
+            tree_glycopsm_list, labels, left_comps = cut2trees(glycan, sugar_classes)
             for idx, tree in enumerate(tree_glycopsm_list[:-1]):
                 tree = glypy_glycoct.loads(tree)
                 left_comp = torch.tensor(left_comps[idx])
@@ -270,13 +265,11 @@ class GlycanDB(DGLDataset):
                 self.graphs.append(graph)
                 # left_comp = [sugar_classes.index(mass) for mass in left_comps[idx]]
                 self.left_compositions.append(left_comp)
-                self.parents.append(torch.tensor(parents[idx]))
                 unordered_label = labels[idx].tolist()
                 if unordered_label not in self.all_entries:
                     self.all_entries.append(unordered_label)
                 onehot_label = self.all_entries.index(unordered_label)
                 self.labels.append(onehot_label)
-                self.parents_depth.append(torch.tensor(parents[idx]))
             edges_src, edges_dst = np.array([0]).astype('int'), np.array([1]).astype('int')
             root_G = dgl.graph((edges_src, edges_dst), num_nodes=2)
             initial_comp = torch.zeros((1, len(sugar_classes)))
@@ -287,8 +280,6 @@ class GlycanDB(DGLDataset):
             root_G.ndata['x'] = torch.tensor(initial_comp, dtype=torch.int32)  #torch.tensor([len(sugar_classes)], dtype=torch.long)
             self.graphs.append(root_G)
             self.labels.append(self.all_entries.index(labels[-1].tolist()))
-            self.parents.append(torch.tensor(len(sugar_classes)))
-            self.parents_depth.append(torch.tensor(0))
             self.left_compositions.append(torch.tensor(left_comps[-1]))
         with open('../criterions/all_entries.pkl', 'wb') as f:
             pickle.dump(self.all_entries, f)
@@ -331,7 +322,6 @@ class GlycanCSV(DGLDataset):
         self.sugar_classes = [glypy.monosaccharides[name].mass() - mass_free_reducing_end for name in sugar_classes]
         self.ion_mass = find_submass(self.all_entries, self.sugar_classes)
         self.input_spectrum_file, self.spectrum_location_dict = spectrum_preprocessing(args)
-        self.input_spectrum_handle = open(self.input_spectrum_file, 'r')
         super().__init__(name='glycan_csv')
 
     def process(self):
@@ -390,7 +380,7 @@ class GlycanCSV(DGLDataset):
                 self.labels.append(torch.tensor([[int(target_glycan_id), fraction_id, int(psm_scan), peptide_only_mass]]))
                 current_mass = peptide_only_mass
                 theoretical_mz = torch.add(current_mass, self.ion_mass)
-                mz, intensity = read_spectrum(self.input_spectrum_handle, self.spectrum_location_dict, scan,
+                mz, intensity = read_spectrum(self.input_spectrum_file, self.spectrum_location_dict, scan,
                                               peptide_only_mass)
                 self.theoretical_mzs.append(torch.tensor(theoretical_mz))
                 self.observed_mzs.append(torch.tensor(mz))

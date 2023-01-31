@@ -170,15 +170,15 @@ def setup_dataset_torch(args, dataset_dict):
                                              valid_idx=dataset_dict["valid_idx"],
                                              test_idx=dataset_dict["test_idx"],
                                              seed=args.seed)
-    # train_idx, val_idx = train_test_split(list(range(len(graphormer_datset))), test_size=0.1)
-    # train_set = Subset(graphormer_datset, train_idx)
-    val_set = Subset(graphormer_datset, list(range(20)))
-    train_dataloader = DataLoader(graphormer_datset,
+    train_idx, val_idx = train_test_split(list(range(len(graphormer_datset))), test_size=0.1)
+    train_set = Subset(graphormer_datset, train_idx)
+    val_set = Subset(graphormer_datset, val_idx)
+    train_dataloader = DataLoader(train_set,
                                   batch_size=args.batch_size,
                                   collate_fn=lambda x: {key:value.to(device) for key, value in collator(x).items()},
                                   shuffle=True,
                                   )
-    val_dataloader = DataLoader(graphormer_datset,
+    val_dataloader = DataLoader(val_set,
                                 batch_size=args.batch_size,
                                 collate_fn=lambda x: {key:value.to(device) for key, value in collator(x).items()},
                                 shuffle=True,
@@ -372,12 +372,8 @@ def inference(args, all_entries, model, dataset_dict, sugar_classes, csv_file, d
 
         print('number of predictions', len(complete_graph))
         for i, graph in enumerate(complete_graph):
-            # print(target_graph[i])
-            # print(target_glycan[i])
             glycan = graph2glycan(graph, sugar_classes_name) if graph else None
             predict_glycans.append(glycan)
-            # print(glycan)
-        # print(target_glycan)
         print('unable to predict', len(unable2predict))
         print(unable2predict)
         test_glycan_accuracy(target_glycan, predict_glycans, csv_file)
@@ -390,7 +386,7 @@ def train_on_psm(args, all_entries, sugar_classes):
     csvfile = '../../../Graphormer/data/mouse_tissues.csv'
     dataset_dict = create_psm_db_dataset(args, csvfile)
     ion_mass = find_submass(all_entries, sugar_classes)
-    train_dataloader, _ = setup_dataset_torch(args, dataset_dict)
+    train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     logger.info("\tDone loading dataset")
     model_name = args.graph_model
     print(model_name)
@@ -425,11 +421,19 @@ def train_on_psm(args, all_entries, sugar_classes):
         val_epoch_loss = 0
         val_ncorrects = 0
         val_sample_sizes = 0
-
-        if train_ncorrects > best_ncorrect_val:
-            logger.info('-Model saved for epoch '.format(epoch) )
+        for j, test_sample in enumerate(val_dataloader):
+            loss, ncorrect, sample_size = evaluate(model, test_sample, all_entries)
+            val_ncorrects += ncorrect
+            val_sample_sizes += sample_size
+            val_epoch_loss += loss
+        val_epoch_loss /= val_sample_sizes
+        val_ncorrects = val_ncorrects / val_sample_sizes
+        logger.info("\tEpoch: {0}".format(epoch))
+        if val_ncorrects > best_ncorrect_val:
+            logger.info('-Model saved for epoch '.format(epoch))
             torch.save(model.state_dict(), cnn_model)
-            best_ncorrect_val = train_ncorrects
+            best_ncorrect_val = val_ncorrects
+
         logger.info("\tTrain Loss: {0}| \tTrain Accuracy: {1}".format(train_epoch_loss, train_ncorrects))
         logger.info("\tVal Loss: {0}| \tVal Accuracy: {1}".format(val_epoch_loss, val_ncorrects))
         print(f'\tTrain Loss: {train_epoch_loss:.3f} | \tVal Loss: {val_epoch_loss:.3f}')
@@ -447,13 +451,12 @@ def inference_on_psm(args, all_entries, sugar_classes, csv_file):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
-    model_file = '../../examples/property_prediction/ckpts/unseen_'+ tissue+'_graphormer.pt'
+    model_file = args.graph_model
     print(model_file)
     graphormer_model.load_state_dict(torch.load(model_file),
                                      strict=False)
     graphormer_model.to(device)
-
-    ion_model = '../../examples/property_prediction/ckpts/mouse_tissue_test_on_unseen_'+tissue+'.pt'
+    ion_model = args.cnn_model
     print(ion_model)
     model = GraphormerIonCNN(args, ion_mass, sugar_classes, graphormer_model)
     model.load_state_dict(torch.load(ion_model), strict=False)
@@ -467,7 +470,7 @@ def prediction(args, all_entries, sugar_classes, csv_file):
     ion_mass = find_submass(all_entries, sugar_classes)
     train_dataloader, val_dataloader = setup_dataset_torch(args, dataset_dict)
     graphormer_model = GraphormerModel(args)
-    model_file =args.graph_model
+    model_file = args.graph_model
     print(model_file)
     graphormer_model.load_state_dict(torch.load(model_file),
                                      strict=False)

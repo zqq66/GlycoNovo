@@ -27,7 +27,7 @@ python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --trai
 
 Train the model with respect to spectrum
 ```
-python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --train_cnn --batch_size=256 --csv_file=../../../Graphormer/data/mouse_tissues.csv --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf
+python train.py --num_epoch=10 --pre_layernorm --encoder_normalize_before --train_cnn --batch_size=256 --csv_file=../../../Graphormer/data/mouse_tissues.csv --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf
 ```
 
 
@@ -41,11 +41,14 @@ python composition_denovo.py --mgf_file=MouseKidney-Z-T-1.refined.mgf --csv_file
 
 ```
 build structure
+
+If you want to test with your own data, please remember to replace glycan_db with path to the glycan database used for your glycan database search.
+
 ```
-python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --inference_cnn --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_lung1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf
+python train.py --pre_layernorm --encoder_normalize_before --inference_cnn --batch_size=256 --csv_file=../../../Graphormer/data/IgGz.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt --glycan_db=../../../Graphormer/data/glycan_database/glycans-v2.pkl
 ```
 prediction
 ```
-python train.py --num_epoch=20 --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_kidney1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
+python train.py --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_kidney1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
 ```
-More details and explanations are provided in the notebook. This is an on-going work, more data and materials will be further added. Please feel free to contact us if you have any questions.
+More details and explanations are provided in the scripts. This is an on-going work, more data and materials will be further added. Please feel free to contact us if you have any questions.

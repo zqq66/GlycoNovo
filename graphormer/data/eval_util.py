@@ -119,7 +119,8 @@ def spectrum_preprocessing(args):
     return input_spectrum_file, spectrum_location_dict
 
 
-def read_spectrum(input_spectrum_handle, spectrum_location_dict, scan_id, peptide_mass):
+def read_spectrum(input_spectrum_file, spectrum_location_dict, scan_id, peptide_mass):
+    input_spectrum_handle = open(input_spectrum_file, 'r')
     spectrum_location = spectrum_location_dict[scan_id]
     input_file_handle = input_spectrum_handle
     input_file_handle.seek(spectrum_location)
@@ -324,7 +325,6 @@ def test_glycan_accuracy(target_glycans, predict_glycans, csvfile, top=None):
     sensitivity_y = num_correct_y / num_target_y
     sensitivity_glycan = num_correct_glycans / num_targets
     precision_y = num_correct_y / num_predict_y
-    print('incorrect_glycan', incorrect_glycan[-10:])
     print('composition_incorrect', composition_incorrect)
     print('num_correct_compositions', composition_matched)
     print('num_correct_glycans_topologic', num_correct_glycans)
