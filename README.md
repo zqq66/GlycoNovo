@@ -51,4 +51,6 @@ prediction
 ```
 python train.py --pre_layernorm --encoder_normalize_before --prediction --batch_size=256 --csv_file=../../../Graphormer/data/comp_denovo_strucgp_mouse_kidney1.csv --mgf_file=../../../Graphormer/data/mouse_tissues_spectrum.mgf --graph_model=../../examples/property_prediction/ckpts/model_pos_node_stop.pt --cnn_model=../../examples/property_prediction/ckpts/mouse_tissue_all.pt
 ```
+
+
 More details and explanations are provided in the scripts. This is an on-going work, more data and materials will be further added. Please feel free to contact us if you have any questions.

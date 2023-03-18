@@ -1,3 +1,5 @@
+import sys
+
 import glypy
 import csv
 import json
@@ -40,9 +42,8 @@ def construct_glycan(root, glycan, struc_lst, cur_idx):
         construct_glycan(root2, glycan, s[1:], next_idx)
     return glycan
 
-def convert_format():
-    strucgp_file = 'mouse_tissue_strucgp_result.csv'
-    new_file = 'mouse_tissue_strucgp_result_glycoct.csv'
+
+def convert_format(strucgp_file, new_file):
     with open(strucgp_file, 'r') as csvfile:
         with open(new_file, 'w+') as dbfile:
             csvreader = csv.DictReader(csvfile)
@@ -53,7 +54,12 @@ def convert_format():
                 row['GlycoCT'] = glypy.io.glycoct.dumps(glycoct).replace('\n', ' ')
                 csvwriter.writerow([v for v in row.values()])
 
-                
+
 if __name__ == '__main__':
-    convert_format()
+    if len(sys.argv) == 2:
+        input_file = sys.argv[1]
+        output_file = sys.argv[2]
+        convert_format(input_file, output_file)
+    else:
+        print('Wrong number of argument, need to be python3 convert_glycan_format.py input.csv output.csv')
 
