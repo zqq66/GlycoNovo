@@ -3,8 +3,12 @@
 
 This is a database-independent method for determining the structure of glycans, composed of two stages. In the first stage, GlycoNovo derives the compositions of glycans from mass spectra, using a dynamic programming method. In the second stage, it constructs the topology of the glycan based on its composition. At each iteration, the model attempts to extract information about the next monosaccharide, starting from the root(i.e. asparagine (Asn) residue of the peptide). We believe that the structure of glycans follows a certain pattern. GlycoNovo uses a novel deep learning based graph encoding structure called Graphormer to learn such patterns and extract features from the differences between observed peaks and theoretical m/z values obtained from the learned distribution.
 
-All Data and checkpoints can be found here [https://drive.google.com/drive/folders/1XbAtWeh4HoHD1l3bMeyMOxM_vB15IFIi?usp=sharing](https://drive.google.com/drive/folders/1nGqXmJKODgOAEQ_I1vAPR8ZLms0tWRN_?usp=drive_link)
+All checkpoints can be found here [https://drive.google.com/drive/folders/1XbAtWeh4HoHD1l3bMeyMOxM_vB15IFIi?usp=sharing](https://drive.google.com/drive/folders/1nGqXmJKODgOAEQ_I1vAPR8ZLms0tWRN_?usp=drive_link)
 
+Glycan database can be found here https://drive.google.com/drive/folders/1201py9ucanuUXKnctzWqGTLSB7Ad8L9c?usp=drive_link 
+
+(PS: ‘unseen’ means not included in the specific testing set. i.e., glycans_yeast_mouse_unseen_kidney.pkl indicates this file doesn’t include any glycan structures in kidney testing set.)
+ 
 As mentioned in the paper, candidates will be automatically generated during training process.
 If you want to inference the framework without training, please make sure to include "all_entries.pkl" in criterions directory
 
